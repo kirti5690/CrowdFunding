@@ -1,0 +1,1248 @@
+<!-- <?php
+session_start();
+if (!isset($_SESSION['admin_id'])) {
+    header("Location: admin_login.php"); // Redirect to admin login if not logged in
+    exit();
+}
+include_once 'model/databse.php';
+include_once 'model/user.php';
+
+$database = new Database();
+$db = $database->getConnection();
+$user = new User($db);
+
+$fundraisers = $user->getPendingFundraisers();
+$approvedFundraisers = $user->getApprovedFundraisers();
+
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel</title>
+    <link rel="stylesheet" href="assets/css/qrowd.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css" />
+<style>
+      
+
+#table-container {
+    flex: 1;
+    padding: 30px;
+}
+
+#table-container h2 {
+    margin-top: 30px;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+table.display {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #fff;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+table.display thead {
+    background-color: #343a40;
+    color: white;
+}
+
+table.display thead th {
+    padding: 12px;
+    text-align: left;
+}
+
+table.display tbody tr:nth-child(even) {
+    background-color: #f4f4f4;
+}
+
+table.display tbody tr:hover {
+    background-color: #e9ecef;
+}
+
+table.display tbody td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+button.approve, button.reject, button.delete {
+    padding: 8px 12px;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button.approve {
+    background-color: #28a745;
+}
+
+button.approve:hover {
+    background-color: #218838;
+}
+
+button.reject {
+    background-color: #dc3545;
+}
+
+button.reject:hover {
+    background-color: #c82333;
+}
+
+button.delete {
+    background-color: #ffc107;
+}
+
+button.delete:hover {
+    background-color: #e0a800;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    table, th, td {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    th {
+        background-color: #007bff;
+        color: #fff;
+    }
+    
+    td {
+        border: none;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    td::before {
+        content: attr(data-label);
+        font-weight: bold;
+        display: block;
+    }
+    body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    color: #333;
+    padding: 0;
+    display: flex;
+    height: 100vh;
+}
+}
+
+</style>
+</head>
+
+<body>
+<div class="sidebar">
+<img src="assets/images/extra/account.png" alt="Admin Photo">
+        <h2>Welcome, Admin</h2>
+        <!-- <nav>
+            <a href="#" onclick="showTable('fundraisers')">Fundraisers</a>
+            <a href="#" onclick="showTable('volunteers')">Volunteers</a>
+            <a href="#" onclick="showTable('donors')">Donors</a>
+        </nav> -->
+</div>
+<style>
+    body{
+      justify-content: center;
+    }
+</style>
+    
+    <h1>Admin Panel</h1>
+    
+    <div id="table-container">
+        <h2>Pending Fundraiser Approvals</h2>
+        <table id="pending-fundraisers" class="display">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Contact Info</th>
+                    <th>Organization Name</th>
+                    <th>Description</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($fundraisers as $fundraiser): ?>
+                <tr>
+                    <td><?= $fundraiser['username'] ?></td>
+                    <td><?= $fundraiser['email'] ?></td>
+                    <td><?= $fundraiser['contact_information'] ?></td>
+                    <td><?= $fundraiser['organization_name'] ?></td>
+                    <td><?= $fundraiser['description'] ?></td>
+                    <td>
+                        <button class="approve" onclick="approveFundraiser(<?= $fundraiser['fundraiser_id']; ?>)">Approve</button>
+                        <button class="reject" onclick="rejectFundraiser(<?= $fundraiser['fundraiser_id']; ?>)">Reject</button>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        
+        <h2>Approved Fundraisers</h2>
+        <table id="approved-fundraisers" class="display">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Organization Name</th>
+                    <th>Approved At</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($approvedFundraisers as $fundraiser): ?>
+                <tr>
+                    <td><?= $fundraiser['username'] ?></td>
+                    <td><?= $fundraiser['email'] ?></td>
+                    <td><?= $fundraiser['organization_name'] ?></td>
+                    <td><?= $fundraiser['approved_at'] ?></td>
+                    <td><?= $fundraiser['status'] ?></td>
+                    <td>
+                        <button class="delete" onclick="deleteFundraiser(<?= $fundraiser['fundraiser_id']; ?>)">Delete</button>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#pending-fundraisers').DataTable();
+            $('#approved-fundraisers').DataTable();
+        });
+        
+        function showTable(table) {
+            $('#table-container').find('table').hide();
+            if (table === 'fundraisers') {
+                // $('#pending-fundraisers').show();
+                // $('#approved-fundraisers').show();
+                $.get('controller/adminController.php', { action: 'getFundriasers' }, function(response) {
+                    console.log(response);
+                    $('#table-container').html(response);
+                    $('#fundraisers').DataTable();
+                });
+            } else if (table === 'volunteers') {
+                // Load volunteers data and show
+                $.get('controller/adminController.php', { action: 'getVolunteers' }, function(response) {
+                    console.log(response);
+                    $('#table-container').html(response);
+                    $('#volunteers').DataTable();
+                });
+            } else if (table === 'donors') {
+                // Load donors data and show
+                $.get('controller/adminController.php', { action: 'getDonors' }, function(response) {
+                    // Assuming response is HTML for the table
+                    $('#table-container').html(response);
+                    $('#donors').DataTable();
+                });
+            }
+        }
+        
+        function approveFundraiser(fundraiserId) {
+            $.ajax({
+                url: 'controller/adminController.php',
+                type: 'POST',
+                contentType: 'application/json',
+                dataType: 'json',
+                data: JSON.stringify({
+                    action: 'approveFundraiser',
+                    fundraiser_id: fundraiserId
+                }),
+                success: function(response) {
+                    alert(response.message);
+                    location.reload(); 
+                },
+                error: function(xhr, status, error) {
+                    console.log(error);
+                    alert('An error occurred while processing the request.');
+                }
+            });
+        }
+
+        function rejectFundraiser(fundraiserId) {
+            $.ajax({
+                url: 'controller/adminController.php',
+                type: 'POST',
+                contentType: 'application/json',
+                dataType: 'json',
+                data: JSON.stringify({
+                    action: 'rejectFundraiser',
+                    fundraiser_id: fundraiserId
+                }),
+                success: function(response) {
+                    alert(response.message);
+                    location.reload(); 
+                },
+                error: function(xhr, status, error) {
+                    console.log(error);
+                    alert('An error occurred while processing the request.');
+                }
+            });
+        }
+
+        function deleteFundraiser(fundraiserId) {
+            $.ajax({
+                url: 'controller/adminController.php',
+                type: 'POST',
+                contentType: 'application/json',
+                dataType: 'json',
+                data: JSON.stringify({
+                    action: 'deleteFundraiser',
+                    fundraiser_id: fundraiserId
+                }),
+                success: function(response) {
+                    alert(response.message);
+                    location.reload(); 
+                },
+                error: function(xhr, status, error) {
+                    console.log(error);
+                    alert('An error occurred while processing the request.');
+                }
+            });
+        }
+    </script>
+</body>
+</html> 
+
+
+
+<!-- <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .sidebar {
+            background-color: #333;
+            color: #fff;
+            height: 100vh;
+            width: 250px;
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding-top: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar a {
+            color: #fff;
+            display: block;
+            padding: 15px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar a:hover {
+            background-color: #444;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .card {
+            border-radius: 10px;
+        }
+
+        .card-header {
+            background-color: #f5f5f5;
+            border-bottom: 1px solid #ddd;
+            padding: 15px;
+            font-weight: bold;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .chart-container {
+            height: 300px;
+        }
+
+        .status-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+        }
+
+        .status-summary .value {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .status-summary .icon {
+            font-size: 2em;
+        }
+        .table th, .table td {
+         text-align: center;
+         vertical-align: middle;
+         }
+
+.table .btn-sm {
+    font-size: 0.8em;
+    padding: 0.25em 0.5em;
+}
+
+#table-container {
+    flex: 1;
+    padding: 30px;
+}
+
+#table-container h2 {
+    margin-top: 30px;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+table.display {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #fff;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+table.display thead {
+    background-color: #343a40;
+    color: white;
+}
+
+table.display thead th {
+    padding: 12px;
+    text-align: left;
+}
+
+table.display tbody tr:nth-child(even) {
+    background-color: #f4f4f4;
+}
+
+table.display tbody tr:hover {
+    background-color: #e9ecef;
+}
+
+table.display tbody td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+button.approve, button.reject, button.delete {
+    padding: 8px 12px;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button.approve {
+    background-color: #28a745;
+}
+
+button.approve:hover {
+    background-color: #218838;
+}
+
+button.reject {
+    background-color: #dc3545;
+}
+
+button.reject:hover {
+    background-color: #c82333;
+}
+
+button.delete {
+    background-color: #ffc107;
+}
+
+button.delete:hover {
+    background-color: #e0a800;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    table, th, td {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    th {
+        background-color: #007bff;
+        color: #fff;
+    }
+    
+    td {
+        border: none;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    td::before {
+        content: attr(data-label);
+        font-weight: bold;
+        display: block;
+    }
+    body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    color: #333;
+    padding: 0;
+    display: flex;
+    height: 100vh;
+}
+}
+
+</style> -->
+
+
+
+
+<div id="fundraisers-table" class="table-responsive ">
+    <h3>Fundraisers</h3>
+    <table class="table table-bordered" id="fundraisers-data">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Contact Information</th>
+                <th>Organization Name</th>
+                <th>Description</th>
+                  
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Data will be populated here via AJAX -->
+        </tbody>
+    </table>
+</div>
+
+<!-- Donors Table -->
+<div id="donors-table" class="table-responsive" >
+    <h3>Donors</h3>
+    <table class="table table-bordered" id="donors-data">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Occupation</th>
+                <th>Contact Information</th>
+                <th>Description</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Data will be populated here via AJAX -->
+        </tbody>
+    </table>
+</div>
+
+<!-- Volunteers Table -->
+<div id="volunteers-table" class="table-responsive" >
+    <h3>Volunteers</h3>
+    <table class="table table-bordered" id="volunteers-data">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Occupation</th>
+                <th>Address</th>
+                <th>Status</th>
+                <th>Hours</th>
+                <th>Description</th>
+              
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Data will be populated here via AJAX -->
+        </tbody>
+    </table>
+</div>
+
+<!-- Campaigns Table -->
+<div id="campaigns-table" class="table-responsive">
+    <h3>Campaigns</h3>
+    <table class="table table-bordered" id="campaigns-data">
+        <thead>
+            <tr>
+                <th>FundraiserId</th>
+                <th>Title</th>
+                <th>Goal Amount</th>
+                <th>Raised Amount</th>
+                <th>Category</th>
+                <th>Start_date</th>
+                <th>End_date</th>
+                  
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Data will be populated here via AJAX -->
+        </tbody>
+    </table>
+</div>
+
+
+
+<script>
+    $(document).on('click', '.delete-fundraiser', function() {
+        const fundraiserId = $(this).data('id');
+        if (confirm('Are you sure you want to delete this fundraiser?')) {
+            $.ajax({
+                url: 'controller/adminController.php',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ action: 'deleteFundraiser', fundraiser_id: fundraiserId }),
+                success: function(response) {
+                    alert(response.message);
+                    loadFundraisersData(); 
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX error (Delete Fundraiser):', status, error);
+                }
+            });
+        }
+    });
+    
+    $(document).on('click', '.delete-donor', function() {
+        const donorId = $(this).data('id');
+        if (confirm('Are you sure you want to delete this donor?')) {
+            $.ajax({
+                url: 'controller/adminController.php',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ action: 'deleteDonor', donor_id: donorId }),
+                success: function(response) {
+                    alert(response.message);
+                    loadDonorsData(); 
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX error (Delete Donor):', status, error);
+                }
+            });
+        }
+    });
+    
+    $(document).on('click', '.delete-volunteer', function() {
+        const volunteerId = $(this).data('id');
+        if (confirm('Are you sure you want to delete this volunteer?')) {
+            $.ajax({
+                url: 'controller/adminController.php',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ action: 'deleteVolunteer', id: volunteerId }),
+                success: function(response) {
+                    alert(response.message);
+                    loadVolunteersData(); 
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX error (Delete Volunteer):', status, error);
+                }
+            });
+        }
+    });
+    </script>
+    <style>
+          .campaigns-section,
+      .form-section .change-password-section {
+        display: none;
+      }
+    body {
+        margin-top: 20px;
+        color: #1a202c;
+        text-align: left;
+        background-color: #e2e8f0;
+      }
+      .main-body {
+        padding: 15px;
+      }
+      .card {
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1),
+          0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      }
+
+      .card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        word-wrap: break-word;
+        background-color: #fff;
+        background-clip: border-box;
+        border: 0 solid rgba(0, 0, 0, 0.125);
+        border-radius: 0.25rem;
+      }
+
+      .card-body {
+        flex: 1 1 auto;
+        min-height: 1px;
+        padding: 1rem;
+      }
+
+      .gutters-sm {
+        margin-right: -8px;
+        margin-left: -8px;
+      }
+
+      .gutters-sm > .col,
+      .gutters-sm > [class*="col-"] {
+        padding-right: 8px;
+        padding-left: 8px;
+      }
+      .mb-3,
+      .my-3 {
+        margin-bottom: 1rem !important;
+      }
+
+      .bg-gray-300 {
+        background-color: #e2e8f0;
+      }
+      .h-100 {
+        height: 100% !important;
+      }
+      .shadow-none {
+        box-shadow: none !important;
+      }
+      /* body {
+        font-family: "Arial", sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 0;
+      } */
+
+      .containera {
+        display: flex;
+        margin: 0;
+        padding: 0;
+      }
+
+      .sidebar {
+        width: 250px;
+        background-color: #1e3737;
+        color: #ecf0f1;
+        padding: 20px;
+        height: 100vh;
+      }
+
+      .sidebar .profile-details {
+        text-align: center;
+      }
+
+      .sidebar .profile-details .profile-picture {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        object-fit: cover;
+      }
+      .profile-details h2 {
+        color: whitesmoke;
+      }
+      .sidebar h2 {
+        margin: 10px 0;
+      }
+
+      .sidebar nav ul {
+        list-style: none;
+        padding: 0;
+      }
+
+      .sidebar nav ul li {
+        margin: 20px 0;
+        padding-left: 45px;
+      }
+
+      .sidebar nav ul li button {
+        background: none;
+        border: none;
+        color: #ecf0f1;
+        font-size: 16px;
+        cursor: pointer;
+      }
+
+      .sidebar nav ul li button:hover {
+        color: #3498db;
+      }
+
+      .main-content {
+        flex-grow: 1;
+        padding: 30px;
+      }
+
+    
+      .profile-section {
+        width: 100%;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+        padding: 30px;
+        background-color: #1e3737;
+      }
+      .profile-section h2 {
+        color: #fd7e14;
+        font-weight: bold;
+        margin-bottom: 20px;
+      }
+
+      .profile-section h2,
+      .form-section h2 {
+        margin-top: 0;
+      }
+      .profile-section p {
+        margin-bottom: 10px;
+        color: grey;
+      }
+
+      .campaign-card {
+        display: flex;
+        background-color: #fff;
+        margin: 20px 0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .campaign-card img {
+        width: 150px;
+        height: 240px;
+        border-radius: 8px 0 0 8px;
+        object-fit: cover;
+      }
+
+      .campaign-card .campaign-info {
+        padding: 20px;
+        flex-grow: 1;
+      }
+
+      .campaign-card .campaign-info h3 {
+        margin: 0 0 10px;
+      }
+
+      .campaign-card .campaign-info p {
+        margin: 5px 0;
+      }
+
+      /* .progress-bar {
+        width: 100%;
+        background-color: #ecf0f1;
+        border-radius: 8px;
+        overflow: hidden;
+        margin: 10px 0;
+      }
+
+      .progress-bar .progress {
+        height: 10px;
+        background-color: #fd7e14;
+      } */
+
+      button.updateCampaignBtn {
+        background-color: #fd7e14;
+        color: white;
+        border: none;
+        padding: 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-top: 10px;
+      }
+
+      button.updateCampaignBtn:hover {
+        color: white;
+        background-color: black;
+      }
+
+      form {
+        display: flex;
+        flex-direction: column;
+      }
+
+      form label {
+        margin-top: 10px;
+      }
+
+      form input,
+      form select,
+      form textarea,
+      form button {
+        margin-top: 5px;
+        padding: 10px;
+        border: 1px solid #bdc3c7;
+        border-radius: 4px;
+      }
+
+      form button {
+        background-color: #fd7e14;
+        color: white;
+        border: none;
+        cursor: pointer;
+        margin-top: 20px;
+      }
+
+      form button:hover {
+        color: #fd7e14;
+        background-color: black;
+      }
+      .change-password-section {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .change-password-section h2 {
+        margin-bottom: 20px;
+        color: #333;
+      }
+
+      .change-password-section form {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .change-password-section form div {
+        margin-bottom: 15px;
+      }
+
+      .change-password-section form label {
+        display: block;
+        margin-bottom: 5px;
+        color: #555;
+      }
+
+      .change-password-section form input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+
+      .change-password-section form button {
+        background-color: #28a745;
+        color: #fff;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+
+      .change-password-section form button:hover {
+        background-color: #218838;
+      }
+
+      #passwordChangeMessage p {
+        margin-top: 10px;
+        font-size: 16px;
+      }
+      .header {
+        background-color: #1e3737;
+        color: white;
+        width: 100%;
+        height: 250px;
+        padding: 0;
+        top: 0;
+        margin: 0;
+      }
+      .main-header__login .dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.main-header__login .dropdown-menu {
+    display: none;
+    position: absolute;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    z-index: 1;
+    width: 150px;
+}
+
+.main-header__login .dropdown-menu li {
+    padding-left:10px;
+    
+    text-align: left;
+}
+
+.main-header__login .dropdown-menu li a {
+    text-decoration: none;
+    color: gray;
+    display: block;
+}
+
+.main-header__login .dropdown-menu li a:hover {
+     color:#fe7f4c;
+}
+    </style>
+
+
+     
+    
+<section>
+    <div class="container-fluid">
+      <div class="row"></div>
+      <div class="sidebar">
+          <div class="profile-details">
+              <img src="assets/images/fundraiser/<?php echo $fundraiser['profile_picture']; ?>" alt="Profile Picture" class="profile-picture">
+              <h2><?php echo htmlspecialchars($fundraiser['username']); ?></h2>
+          </div>
+          <nav>
+              <ul>
+                  <li><button id="showProfile">Profile</button></li>
+                  <li><button id="showCampaigns">Campaigns</button></li>
+                  <li><button id="showCreateCampaignForm">Create Campaign</button></li>
+                  <li><button id="ChangePass">Change Password</button></li>
+              </ul>
+          </nav>
+      </div>
+  <div class="main-content">
+<div id="profileSection" class="profile-section">
+      <h2>Profile Information</h2>
+      <div class="container">
+          <div class="main-body">
+              <div class="col-md-10">
+                  <div class="card mb-3">
+                    <div class="card-body">
+                      <div class="row">
+                       <div class="col-sm-3">
+                         <h6 class="mb-0">Full Name</h6>
+                       </div>
+                       <div class="col-sm-9 text-secondary">
+                         <?php echo htmlspecialchars($fundraiser['username']); ?>
+                       </div>
+                      </div>
+                      <hr>
+                     <div class="row">
+                        <div class="col-sm-3">
+                            <h6 class="mb-0">Email</h6>
+                        </div>
+                       <div class="col-sm-9 text-secondary">
+                             <?php echo htmlspecialchars($fundraiser['email']); ?>
+                      </div>
+                    </div>
+                     <hr>
+                <div class="row">
+                  <div class="col-sm-3">
+                    <h6 class="mb-0">Phone</h6>
+                  </div>
+                  <div class="col-sm-9 text-secondary">
+                  <?php echo htmlspecialchars($fundraiser['contact_information']); ?>
+                  </div>
+                </div>
+                <hr>
+                <div class="row">
+                  <div class="col-sm-3">
+                    <h6 class="mb-0">Organization Name</h6>
+                  </div>
+                  <div class="col-sm-9 text-secondary">
+                  <?php echo htmlspecialchars($fundraiser['organization_name']); ?>
+                  </div>
+                </div>
+                <hr>
+                <div class="row">
+                  <div class="col-sm-3">
+                    <h6 class="mb-0">Description</h6>
+                  </div>
+                  <div class="col-sm-9 text-secondary">
+                  <?php echo htmlspecialchars($fundraiser['description']); ?>
+                  </div>
+                </div>
+                <hr>
+                <div class="row">
+                  <div class="col-sm-12">
+                    <a class="btn btn-info editfund">Edit</a>
+                  </div>
+                </div>
+                </div>
+              </div>
+             </div>
+          </div>
+    </div>
+</div>
+<div id="campaignsSection" class="campaigns-section" style="margin-bottom:90px;">
+  <div class="container">
+      <div class="row">
+          <?php foreach ($campaigns as $campaign):
+              $raised_amount = $campaign['raised_amount'];
+              $goal_amount = $campaign['goal_amount'];
+              $percentageRaised = number_format(($raised_amount / $goal_amount) * 100, 2);
+          ?>
+          <div class="col-md-4">
+              <div class="project-one__single" style="height: 500px;">
+                  <div class="project-one__img-box">
+                      <div class="project-one__img" style="height: 250px; overflow: hidden;">
+                          <img src="assets/images/campaign/<?php echo $campaign['photo']; ?>" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+                      </div>
+                      <div class="recomanded-one__icon">
+                          <i class="far fa-heart"></i>
+                      </div>
+                      <div class="project-one__content">
+                          <div class="project-one__tag-and-remaining">
+                              <div class="project-one-tag">
+                                  <p><?php echo htmlspecialchars($campaign['category']); ?></p>
+                              </div>
+                          </div>
+                          <h3 class="project-one__title"><?php echo htmlspecialchars($campaign['title']); ?></h3>
+                          <div class="progress-levels">
+                              <div class="progress-box">
+                                  <div class="inner count-box">
+                                      <div class="bar">
+                                          <div class="bar-inner">
+                                              <div class="skill-percent">
+                                                  <span class="count-text" data-speed="3000" data-stop="<?php echo $percentageRaised; ?>"><?php echo $percentageRaised; ?>%</span>
+                                              </div>
+                                              <div class="bar-fill" data-percent="<?php echo $percentageRaised; ?>"></div>
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
+                          <div class="project-one__goals">
+                              <p class="project-one__goals-one"><span><?php echo $campaign['raised_amount']; ?></span><br>Goal of <?php echo $campaign['goal_amount']; ?></p>
+                              <p class="project-one__goals-one"><span class="odometer project-one__plus" data-count="12"></span><br>Backers We Got</p>
+                             
+                          </div>
+                          <button class="updateCampaignBtn" data-id="<?php echo $campaign['campaign_id']; ?>">Update Campaign</button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+          <?php endforeach; ?>
+      </div>
+  </div>
+</div>
+
+<div id="createCampaignForm" class="form-section" style="display:none;">
+  <h2>Create New Campaign</h2>
+  <form  action="profile_dashboard.php" method="post" enctype="multipart/form-data">
+  <!-- <input type="hidden" id="update_campaign_id" name="action" value="createCampaign"> -->
+
+      <label for="title">Title:</label>
+      <input type="text" id="title" name="title" required>
+      <label for="description">Description:</label>
+      <textarea id="description" name="description" required></textarea>
+      <label for="goal">Goal Amount:</label>
+      <input type="number" id="goal" name="goal" required>
+      
+      <label for="status">Status:</label>
+      <input type="text" id="status" name="status" required>
+
+      <label for="category">Category:</label>
+      <select id="category" name="category" required>
+          <?php foreach ($categories as $category): ?>
+          <option value="<?php echo htmlspecialchars($category); ?>"><?php echo htmlspecialchars($category); ?></option>
+          <?php endforeach; ?>
+      </select>
+      <label for="start">Start Date:</label>
+      <input type="date" id="start" name="start" required>
+      <label for="end">End Date:</label>
+      <input type="date" id="end" name="end" required>
+      <label for="image">Image:</label>
+      <input type="file" id="image" name="image" required>
+      <button type="submit" name="create_campaign">Create Campaign</button>
+  </form>
+</div>
+
+
+
+<div id="changePasswordSection" class="change-password-section" style="display:none;">
+  <h2>Change Password</h2>
+  <form id="changePasswordForm">
+      <input type="hidden" name="action" value="change_password">
+      <div>
+          <label for="old_password">Old Password:</label>
+          <input type="password" id="old_password" name="old_password" required>
+      </div>
+      <div>
+          <label for="new_password">New Password:</label>
+          <input type="password" id="new_password" name="new_password" required>
+      </div>
+      <div>
+          <label for="confirm_password">Confirm New Password:</label>
+          <input type="password" id="confirm_password" name="confirm_password" required>
+      </div>
+      <button type="submit">Change Password</button>
+      <div id="passwordChangeMessage"></div>
+  </form>
+</div>
+
+<div id="updateFundraiserForm" class="form-section" style="display:none;">
+    <div class="container">
+      <div class="main-body">
+          <div class="col-md-10">
+              <div class="card mb-3">
+                   <div class="card-body">
+                   <div class="col-lg-10">
+                  <div class="card">
+                      <div class="card-body">
+                          <div class="row mb-3">
+                              <div class="col-sm-3">
+                                  <h6 class="mb-0">Full Name</h6>
+                              </div>
+                              <div class="col-sm-9 text-secondary">
+                                  <input type="text" class="form-control" id="username" value=" <?php echo htmlspecialchars($fundraiser['username']); ?>">
+                              </div>
+                          </div>
+                          <div class="row mb-3">
+                              <div class="col-sm-3">
+                                  <h6 class="mb-0">Email</h6>
+                              </div>
+                              <div class="col-sm-9 text-secondary">
+                                  <input type="text" class="form-control" id="email" value=" <?php echo htmlspecialchars($fundraiser['email']); ?>">
+                              </div>
+                          </div>
+                          <div class="row mb-3">
+                              <div class="col-sm-3">
+                                  <h6 class="mb-0">Phone</h6>
+                              </div>
+                              <div class="col-sm-9 text-secondary">
+                                  <input type="text" class="form-control" id="contact_information" value=" <?php echo htmlspecialchars($fundraiser['contact_information']); ?>">
+                              </div>
+                          </div>
+                          <div class="row mb-3">
+                              <div class="col-sm-3">
+                                  <h6 class="mb-0">Organization Name</h6>
+                              </div>
+                              <div class="col-sm-9 text-secondary">
+                                  <input type="text" class="form-control" id="organization_name" value=" <?php echo htmlspecialchars($fundraiser['organization_name']); ?>">
+                              </div>
+                          </div>
+                          <div class="row mb-3">
+                              <div class="col-sm-3">
+                                  <h6 class="mb-0">Description</h6>
+                              </div>
+                              <div class="col-sm-9 text-secondary">
+                                  <input type="text" class="form-control" id="descriptions" value=" <?php echo htmlspecialchars($fundraiser['description']); ?>">
+                              </div>
+                          </div>
+                          <div class="row">
+                              <div class="col-sm-3"></div>
+                              <div class="col-sm-9 text-secondary">
+                                  <input type="button" class="btn btn-primary px-4" value="Save Changes">
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+                   </div>
+              </div>
+          </div>
+      </div>
+    </div>
+</div>
+</div>
+</section>
